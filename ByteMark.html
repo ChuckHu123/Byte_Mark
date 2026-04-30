@@ -443,11 +443,21 @@
                 
                 part = part.replace(/^0x/i, '');
                 
-                if (!/^[0-9A-Fa-f]{1,2}$/.test(part)) {
+                if (!/^[0-9A-Fa-f]+$/.test(part)) {
                     throw new Error(`无效的十六进制字节: ${part}`);
                 }
                 
-                bytes.push(part.toUpperCase().padStart(2, '0'));
+                if (part.length > 2) {
+                    if (part.length % 2 !== 0) {
+                        throw new Error(`十六进制字符串 "${part}" 长度不是偶数，无法正确分割为字节`);
+                    }
+                    for (let i = 0; i < part.length; i += 2) {
+                        const byte = part.substr(i, 2);
+                        bytes.push(byte.toUpperCase());
+                    }
+                } else {
+                    bytes.push(part.toUpperCase().padStart(2, '0'));
+                }
             }
             
             return bytes;
