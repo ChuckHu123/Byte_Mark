@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
-                             QTextEdit, QLabel, QPushButton)
+                             QTextEdit, QLabel, QPushButton, QComboBox)
 from hex_parser import HexParser
 
 
@@ -14,24 +14,6 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
     
     def init_ui(self):
-        """
-        初始化用户界面
-        
-        任务：
-        1. 创建一个中央部件（QWidget）
-        2. 创建垂直布局（QVBoxLayout）
-        3. 添加以下组件：
-           - 标题标签（QLabel）
-           - 输入框（QTextEdit）
-           - 解析按钮（QPushButton）
-           - 输出标签（QLabel，用于显示结果）
-        4. 连接信号和槽（按钮点击事件）
-        
-        提示：
-        - 用 setLayout() 设置布局
-        - 用 connect() 连接信号
-        """
-        # TODO: 在这里创建你的界面
 
         central_widget = QWidget()           # 1. 创建中央部件
         self.setCentralWidget(central_widget) # 2. 设置为窗口中央部件
@@ -42,30 +24,59 @@ class MainWindow(QMainWindow):
 
         self.hex_input = QTextEdit()
         layout.addWidget(self.hex_input)
+
+        self.index_offset = QTextEdit()
+        layout.addWidget(QLabel("索引偏移量："))
+        layout.addWidget(self.index_offset)
         
+        layout.addWidget(QLabel("显示格式："))
+
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["十六进制(0x00)", "十进制(0)", "两者都显示(both)"])
+        layout.addWidget(self.format_combo)
+
         parse_btn = QPushButton("解析")
         parse_btn.clicked.connect(self.parse_hex)
         layout.addWidget(parse_btn)
         
         self.output_label = QLabel("结果将显示在这里")
         layout.addWidget(self.output_label)
-
-        pass
     
     def parse_hex(self):
-        """
-        解析按钮点击时的处理函数
-        
-        任务：
-        1. 从输入框获取文本
-        2. 调用 HexParser.parse_hex_bytes() 解析
-        3. 将结果显示在输出标签上
-        4. 如果有错误，显示错误信息
-        
-        提示：
-        - 用 self.hex_input.toPlainText() 获取输入
-        - 用 try-except 捕获异常
-        - 用 self.output_label.setText() 显示结果
-        """
-        # TODO: 在这里实现解析逻辑
-        pass
+
+        hex_text = self.hex_input.toPlainText()
+
+        index_offset = 0
+        if self.index_offset.toPlainText():
+            if self.index_offset.toPlainText().isdigit():
+                index_offset = int(self.index_offset.toPlainText())
+            else:
+                self.output_label.setText("❌ 索引偏移量必须是数字")
+                return
+
+        try:
+            self.current_bytes = HexParser.parse_hex_bytes(hex_text)
+            if self.current_bytes:
+                # 根据下拉框的文本直接映射到格式类型
+                format_mapping = {
+                    "十六进制(0x00)": "hex",
+                    "十进制(0)": "dec",
+                    "两者都显示(both)": "both"
+                }
+                current_text = self.format_combo.currentText()
+                format_type = format_mapping.get(current_text, "hex")
+                
+                # 对每个字节进行格式化，并添加索引
+                formatted_bytes = []
+                for index, byte in enumerate(self.current_bytes):
+                    formatted_byte = HexParser.format_byte_display(byte, format_type)
+                    formatted_bytes.append(f"[{index + index_offset}] {formatted_byte}")
+                
+                result_text = ", ".join(formatted_bytes)
+                self.output_label.setText(f"✅ 解析成功！共 {len(self.current_bytes)} 个字节：\n{result_text}")
+
+            else:
+                self.output_label.setText("⚠️ 未检测到有效字节")
+
+        except ValueError as e:
+            self.output_label.setText(f"❌ 错误：{e}")
