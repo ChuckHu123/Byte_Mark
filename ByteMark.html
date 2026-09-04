@@ -291,7 +291,7 @@
             <label for="hexInput">📋 输入十六进制报文：</label>
             <textarea 
                 id="hexInput" 
-                placeholder="在此粘贴16进制报文，例如：00 01 ff 19 23&#10;支持格式：空格分隔、逗号分隔、连续十六进制"
+                placeholder="在此粘贴16进制报文，例如：00 01 ff 19 23 或 0xa1&#10;支持格式：空格/逗号分隔、连续十六进制、0x 前缀"
             ></textarea>
             
             <div class="error-message" id="errorMessage"></div>
@@ -419,29 +419,15 @@
             
             cleaned = cleaned.replace(/\s+/g, ' ').trim();
             
-            if (!cleaned.includes(' ')) {
-                if (cleaned.length % 2 !== 0) {
-                    throw new Error('连续十六进制字符串长度必须为偶数');
-                }
-                const bytes = [];
-                for (let i = 0; i < cleaned.length; i += 2) {
-                    const byte = cleaned.substr(i, 2);
-                    if (!/^[0-9A-Fa-f]{2}$/.test(byte)) {
-                        throw new Error(`无效的十六进制字节: ${byte}`);
-                    }
-                    bytes.push(byte.toUpperCase());
-                }
-                return bytes;
-            }
-            
             const parts = cleaned.split(' ');
             const bytes = [];
             
             for (let part of parts) {
-                part = part.trim();
-                if (!part) continue;
+                // 统一去掉 0x/0X 前缀，兼容 "0xa1"、"0XA1" 等写法（单个 token 的连续串也走这里）
+                part = part.trim().replace(/^0x/i, '');
                 
-                part = part.replace(/^0x/i, '');
+                // 空片段或单独的 "0x" 直接跳过
+                if (!part) continue;
                 
                 if (!/^[0-9A-Fa-f]+$/.test(part)) {
                     throw new Error(`无效的十六进制字节: ${part}`);
